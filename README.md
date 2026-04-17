@@ -88,3 +88,26 @@ All 36 tests pass covering:
 - Work/break session transitions
 - Long break logic
 - State defaults
+
+## Publishing to npm
+
+This repo is configured to publish automatically from GitHub Actions when you push a version tag matching `v*`.
+
+### One-time setup
+
+1. Publish the package once manually if it does not exist on npm yet.
+2. On npm, open the package settings and add a **Trusted Publisher**:
+   - Provider: **GitHub Actions**
+   - Repository: `lmn451/pi-pomodoro`
+   - Workflow file: `publish.yml`
+3. Make sure the package name `pi-pomodoro` is available to your npm account.
+
+### Release a new version
+
+```bash
+npm version patch
+git push
+git push --tags
+```
+
+You can also use `minor` or `major` instead of `patch`.

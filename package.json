@@ -1,5 +1,5 @@
 {
-  "name": "pi-pomodro",
+  "name": "pi-pomodoro",
   "version": "1.0.0",
   "description": "Pomodoro timer extension for pi coding agent",
   "main": "pomodoro.ts",
@@ -13,7 +13,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/lmn451/pi-pomodro"
+    "url": "https://github.com/lmn451/pi-pomodoro"
   },
   "pi": {
     "extensions": [

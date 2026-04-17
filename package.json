@@ -1,0 +1,23 @@
+{
+  "name": "pi-pomodro",
+  "version": "1.0.0",
+  "description": "Pomodoro timer extension for pi coding agent",
+  "main": "pomodoro.ts",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pomodoro",
+    "timer",
+    "productivity"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lmn451/pi-pomodro"
+  },
+  "pi": {
+    "extensions": [
+      "./pomodoro.ts"
+    ]
+  }
+}

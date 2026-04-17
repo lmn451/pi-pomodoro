@@ -8,6 +8,7 @@ A Pomodoro technique timer extension for the [pi coding agent](https://github.co
 - **Focus tracking**: Set focus when starting or mid-session
 - **Visual status**: Shows timer and focus in the footer status bar
 - **Commands**: Use `/pomodoro` for quick actions
+- **Agent tools**: The AI agent can start/stop/check the timer directly
 - **Persistence**: State survives session restarts
 - **Notifications**: Alerts when sessions complete
 
@@ -58,6 +59,20 @@ pi
 # Configure custom durations
 /pomodoro set 30 10 20  # 30min work, 10min break, 20min long break
 ```
+
+### Agent Tools
+
+The AI agent can control the timer directly without user intervention:
+
+| Tool | Description |
+|------|-------------|
+| `pomodoro_start` | Start the timer (optional `focus` param) |
+| `pomodoro_stop` | Pause the timer |
+| `pomodoro_reset` | Reset to work session |
+| `pomodoro_status` | Get current status |
+| `pomodoro_focus` | Set/update focus task |
+
+Just ask: *"start a pomodoro session"* or *"check pomodoro status"*.
 
 ### Keyboard Shortcut
 

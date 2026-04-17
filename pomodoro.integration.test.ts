@@ -55,6 +55,7 @@ function createHarness(entries: Entry[] = []) {
     registerCommand(name: string, command: any) {
       commands.set(name, command);
     },
+    registerTool() {},
     registerShortcut() {},
   };
 

@@ -9,11 +9,16 @@
  *   /pomodoro focus <task>       # Set/update focus
  *   /pomodoro set <work> <break> <long>  # Configure durations
  *
+ * The agent can also call pomodoro tools directly:
+ *   pomodoro_start, pomodoro_stop, pomodoro_reset, pomodoro_status, pomodoro_focus
+ *
  * Examples:
  *   /pomodoro start
  *   /pomodoro start Fix authentication bug
  *   /pomodoro set 30 10 20
  */
+
+import { Type } from "@sinclair/typebox";
 
 export default function (pi: any) {
   const DEFAULT_WORK_SECONDS = 25 * 60;
@@ -287,6 +292,91 @@ export default function (pi: any) {
             "info"
           );
       }
+    },
+  });
+
+  // Agent-callable tools
+  pi.registerTool({
+    name: "pomodoro_start",
+    label: "Pomodoro Start",
+    description: "Start the Pomodoro timer. Optionally set a focus task for this session.",
+    promptSnippet: "Start the Pomodoro timer with an optional focus task",
+    parameters: Type.Object({
+      focus: Type.Optional(Type.String({ description: "Focus task for this session (optional)" })),
+    }),
+    async execute(_toolCallId: string, params: { focus?: string }, _signal: any, _onUpdate: any, extensionCtx: any) {
+      ctx = extensionCtx;
+      startTimer(params.focus);
+      let msg = "Pomodoro started: " + formatTime(state.remainingSeconds);
+      if (state.currentFocus) msg += " [" + state.currentFocus + "]";
+      return { content: [{ type: "text", text: msg }], details: {} };
+    },
+  });
+
+  pi.registerTool({
+    name: "pomodoro_stop",
+    label: "Pomodoro Stop",
+    description: "Pause the Pomodoro timer.",
+    promptSnippet: "Pause the Pomodoro timer",
+    parameters: Type.Object({}),
+    async execute(_toolCallId: string, _params: any, _signal: any, _onUpdate: any, extensionCtx: any) {
+      ctx = extensionCtx;
+      stopTimer();
+      return { content: [{ type: "text", text: "Pomodoro paused at " + formatTime(state.remainingSeconds) }], details: {} };
+    },
+  });
+
+  pi.registerTool({
+    name: "pomodoro_reset",
+    label: "Pomodoro Reset",
+    description: "Reset the Pomodoro timer to the start of a work session.",
+    promptSnippet: "Reset the Pomodoro timer",
+    parameters: Type.Object({}),
+    async execute(_toolCallId: string, _params: any, _signal: any, _onUpdate: any, extensionCtx: any) {
+      ctx = extensionCtx;
+      stopTimer();
+      state.remainingSeconds = state.workDuration;
+      state.isBreak = false;
+      state.currentFocus = "";
+      updateStatus();
+      persistState();
+      return { content: [{ type: "text", text: "Pomodoro reset to " + formatTime(state.workDuration) }], details: {} };
+    },
+  });
+
+  pi.registerTool({
+    name: "pomodoro_status",
+    label: "Pomodoro Status",
+    description: "Get the current Pomodoro timer status: running/paused, time remaining, mode, focus, and sessions completed.",
+    promptSnippet: "Get current Pomodoro timer status",
+    parameters: Type.Object({}),
+    async execute(_toolCallId: string, _params: any, _signal: any, _onUpdate: any, extensionCtx: any) {
+      ctx = extensionCtx;
+      const focus = state.currentFocus ? " [" + state.currentFocus + "]" : "";
+      const text =
+        (state.isRunning ? "Running" : "Paused") +
+        ": " + formatTime(state.remainingSeconds) +
+        " (" + (state.isBreak ? "break" : "work") + ")" +
+        focus +
+        " | Sessions completed: " + state.sessionsCompleted;
+      return { content: [{ type: "text", text }], details: { ...state } };
+    },
+  });
+
+  pi.registerTool({
+    name: "pomodoro_focus",
+    label: "Pomodoro Focus",
+    description: "Set or update the focus task for the current Pomodoro session.",
+    promptSnippet: "Set the Pomodoro focus task",
+    parameters: Type.Object({
+      focus: Type.String({ description: "The task to focus on" }),
+    }),
+    async execute(_toolCallId: string, params: { focus: string }, _signal: any, _onUpdate: any, extensionCtx: any) {
+      ctx = extensionCtx;
+      state.currentFocus = params.focus.trim();
+      updateStatus();
+      persistState();
+      return { content: [{ type: "text", text: "Focus set: " + state.currentFocus }], details: {} };
     },
   });
 

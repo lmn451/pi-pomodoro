@@ -22,7 +22,7 @@ export default function (pi: any) {
   const DEFAULT_SESSIONS_UNTIL_LONG = 4;
   const STATUS_KEY = "pomodoro-timer";
 
-  let state = {
+  const defaultState = {
     isRunning: false,
     isBreak: false,
     remainingSeconds: DEFAULT_WORK_SECONDS,
@@ -34,8 +34,50 @@ export default function (pi: any) {
     currentFocus: "",
   };
 
+  let state = { ...defaultState };
   let timerInterval: any = null;
   let ctx: any = null;
+
+  function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+  }
+
+  function isPositiveInteger(value: unknown): value is number {
+    return Number.isInteger(value) && value > 0;
+  }
+
+  function isNonNegativeInteger(value: unknown): value is number {
+    return Number.isInteger(value) && value >= 0;
+  }
+
+  function parseDurationMinutes(value?: string): number | null {
+    if (!value || !/^\d+$/.test(value)) return null;
+
+    const minutes = Number(value);
+    return Number.isSafeInteger(minutes) && minutes > 0 ? minutes : null;
+  }
+
+  function restoreStateEntry(data: unknown) {
+    if (!isRecord(data)) {
+      console.warn("Skipping invalid pomodoro state entry:", data);
+      return;
+    }
+
+    state = {
+      ...state,
+      ...(typeof data.isRunning === "boolean" ? { isRunning: data.isRunning } : {}),
+      ...(typeof data.isBreak === "boolean" ? { isBreak: data.isBreak } : {}),
+      ...(isNonNegativeInteger(data.remainingSeconds) ? { remainingSeconds: data.remainingSeconds } : {}),
+      ...(isPositiveInteger(data.workDuration) ? { workDuration: data.workDuration } : {}),
+      ...(isPositiveInteger(data.breakDuration) ? { breakDuration: data.breakDuration } : {}),
+      ...(isPositiveInteger(data.longBreakDuration) ? { longBreakDuration: data.longBreakDuration } : {}),
+      ...(isNonNegativeInteger(data.sessionsCompleted) ? { sessionsCompleted: data.sessionsCompleted } : {}),
+      ...(isPositiveInteger(data.sessionsUntilLongBreak)
+        ? { sessionsUntilLongBreak: data.sessionsUntilLongBreak }
+        : {}),
+      ...(typeof data.currentFocus === "string" ? { currentFocus: data.currentFocus } : {}),
+    };
+  }
 
   function formatTime(seconds: number): string {
     const mins = Math.floor(seconds / 60);
@@ -57,6 +99,20 @@ export default function (pi: any) {
     }
   }
 
+  function tickTimer() {
+    state.remainingSeconds--;
+
+    if (state.remainingSeconds <= 0) {
+      handleTimerComplete();
+    } else {
+      updateStatus();
+    }
+  }
+
+  function beginTimerInterval() {
+    timerInterval = setInterval(tickTimer, 1000);
+  }
+
   function startTimer(focus?: string) {
     if (timerInterval) return;
     
@@ -65,15 +121,7 @@ export default function (pi: any) {
     state.isRunning = true;
     updateStatus();
     persistState();
-
-    timerInterval = setInterval(() => {
-      state.remainingSeconds--;
-      if (state.remainingSeconds <= 0) {
-        handleTimerComplete();
-      } else {
-        updateStatus();
-      }
-    }, 1000);
+    beginTimerInterval();
   }
 
   function stopTimer() {
@@ -132,21 +180,12 @@ export default function (pi: any) {
     
     for (const entry of extensionCtx.sessionManager.getEntries()) {
       if (entry.type === "custom" && entry.customType === "pomodoro-state") {
-        try {
-          state = { ...state, ...entry.data };
-        } catch (e) { /* ignore */ }
+        restoreStateEntry(entry.data);
       }
     }
     
     if (state.isRunning && !timerInterval) {
-      timerInterval = setInterval(() => {
-        state.remainingSeconds--;
-        if (state.remainingSeconds <= 0) {
-          handleTimerComplete();
-        } else {
-          updateStatus();
-        }
-      }, 1000);
+      beginTimerInterval();
     }
     
     updateStatus();
@@ -213,13 +252,13 @@ export default function (pi: any) {
         }
 
         case "set": {
-          const workMins = parseInt(parts[1]);
-          const breakMins = parseInt(parts[2]);
-          const longMins = parseInt(parts[3]);
+          const workMins = parseDurationMinutes(parts[1]);
+          const breakMins = parseDurationMinutes(parts[2]);
+          const longMins = parseDurationMinutes(parts[3]);
           
-          if (isNaN(workMins) || isNaN(breakMins) || isNaN(longMins)) {
+          if (workMins === null || breakMins === null || longMins === null) {
             extensionCtx.ui.notify(
-              "Usage: /pomodoro set <work> <break> <long> (in minutes)",
+              "Invalid durations. Use: /pomodoro set <work> <break> <long> (positive whole minutes)",
               "info"
             );
             break;

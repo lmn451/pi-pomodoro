@@ -95,12 +95,9 @@ This repo is configured to publish automatically from GitHub Actions when you pu
 
 ### One-time setup
 
-1. Publish the package once manually if it does not exist on npm yet.
-2. On npm, open the package settings and add a **Trusted Publisher**:
-   - Provider: **GitHub Actions**
-   - Repository: `lmn451/pi-pomodoro`
-   - Workflow file: `publish.yml`
-3. Make sure the package name `pi-pomodoro` is available to your npm account.
+1. In npm, create an automation token with publish access for your account.
+2. In GitHub, add the token as an Actions secret named `NPM_TOKEN`.
+3. Make sure the package name `pi-pomodoro` belongs to your npm account.
 
 ### Release a new version
 

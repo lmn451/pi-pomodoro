@@ -1,5 +1,8 @@
 #!/bin/bash
 # Publish flow: bump version, commit, tag, push
+#
+# Note: After pushing the tag, GitHub Actions will automatically
+# publish to npm. No manual 'npm publish' needed.
 
 set -e
 

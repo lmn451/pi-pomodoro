@@ -17,8 +17,7 @@ A Pomodoro technique timer extension for the [pi coding agent](https://github.co
 ## Installation
 
 ```bash
-cp pomodoro.ts ~/.pi/agent/extensions/
-pi
+pi install npm:pi-pomodoro
 ```
 
 ## Usage

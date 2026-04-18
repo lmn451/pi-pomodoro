@@ -11,6 +11,8 @@ A Pomodoro technique timer extension for the [pi coding agent](https://github.co
 - **Agent tools**: The AI agent can start/stop/check the timer directly
 - **Persistence**: State survives session restarts
 - **Notifications**: Alerts when sessions complete
+- **System prompt integration**: Timer status injected into LLM context
+- **Auto-run**: On new sessions, prompts to start a pomodoro
 
 ## Installation
 
@@ -77,6 +79,15 @@ Just ask: *"start a pomodoro session"* or *"check pomodoro status"*.
 ### Keyboard Shortcut
 
 - `Ctrl+Shift+P` - Toggle timer start/stop
+
+### Auto-Run Behavior
+
+The extension automatically:
+- Injects timer status into the system prompt so the LLM always knows the current session
+- Suggests starting a pomodoro on fresh sessions
+- Reminds about breaks when work sessions complete
+
+The LLM can control the timer without user intervention - just say "start a pomodoro" or "check timer status".
 
 ## Default Settings
 

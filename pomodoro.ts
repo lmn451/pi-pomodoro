@@ -1,6 +1,9 @@
 /**
  * Pomodoro Timer Extension for pi
  *
+ * Automatically manages work sessions using the Pomodoro Technique.
+ * When a work session ends, the agent is notified to take a break.
+ *
  * Usage:
  *   /pomodoro start [focus]      # Start timer, optional focus task
  *   /pomodoro stop               # Pause timer
@@ -11,6 +14,10 @@
  *
  * The agent can also call pomodoro tools directly:
  *   pomodoro_start, pomodoro_stop, pomodoro_reset, pomodoro_status, pomodoro_focus
+ *
+ * Auto-run behavior:
+ *   - On session start: if no timer is running, prompts to start one
+ *   - On agent_end: if timer was running and work session completed, reminds about break
  *
  * Examples:
  *   /pomodoro start
@@ -399,4 +406,71 @@ export default function (pi: any) {
       timerInterval = null;
     }
   });
+
+  // Append pomodoro info to system prompt
+  pi.on("before_agent_start", async (event: any) => {
+    const pomodoroInfo = buildPomodoroPrompt();
+    return {
+      systemPrompt: event.systemPrompt + "\n\n" + pomodoroInfo,
+    };
+  });
+
+  // Auto-run: start timer when user assigns a task
+  pi.on("agent_end", async (event: any) => {
+    if (state.isRunning || state.sessionsCompleted > 0) return;
+    
+    const messages = event.messages || [];
+    const lastMessage = messages[messages.length - 1];
+    
+    // Check if user sent a substantive message (not just greeting)
+    const isTask = lastMessage?.content && 
+      lastMessage.content.length > 10 &&
+      !lastMessage.content.match(/^(hi|hey|hello|thanks|thank you)/i);
+    
+    if (isTask) {
+      // Auto-start the pomodoro with the task as focus
+      const taskText = lastMessage.content.substring(0, 100);
+      startTimer(taskText);
+      ctx?.ui.notify("🍅 Pomodoro started for: " + taskText, "info");
+    } else if (messages.length <= 2) {
+      // First message but looks like greeting - still suggest
+      ctx?.ui.notify("💡 Tip: Start a pomodoro with /pomodoro start or pomodoro_start tool", "info");
+    }
+  });
+
+  function buildPomodoroPrompt(): string {
+    if (!state.isRunning && state.sessionsCompleted === 0) {
+      return `## Pomodoro Timer (REQUIRED)
+
+You MUST use the Pomodoro technique to manage your work sessions. This extension helps maintain focus and prevent burnout.
+
+CRITICAL: When user assigns ANY task or asks you to do something:
+1. IMMEDIATELY call pomodoro_start({ focus: "task description" }) as your FIRST action
+2. Do NOT read files, run commands, or do any work until pomodoro is started
+3. Track time actively - don't let sessions expire unnoticed
+4. When work session ends, remind user to take a break
+
+Tools: pomodoro_start, pomodoro_stop, pomodoro_reset, pomodoro_status, pomodoro_focus
+Or command: /pomodoro start [focus]`;
+    }
+
+    const mode = state.isBreak ? "BREAK" : "WORK";
+    const time = formatTime(state.remainingSeconds);
+    const focus = state.currentFocus ? ` | Focus: ${state.currentFocus}` : "";
+    const sessions = `${state.sessionsCompleted}/${DEFAULT_SESSIONS_UNTIL_LONG}`;
+    const status = state.isRunning ? "● RUNNING" : "○ PAUSED";
+
+    if (state.isBreak) {
+      return `## Pomodoro Timer [${status}]
+${mode} session | ${time} remaining
+Sessions completed: ${state.sessionsCompleted}${focus}
+
+Take a break! Step away from the screen.${focus ? ` Then resume: ${focus}` : ""}`;
+    }
+
+    return `## Pomodoro Timer [${status}]
+${mode} session | ${time} remaining | Session ${sessions}${focus}
+
+Stay focused on the current task. When the timer ends, I'll remind you to take a break.`;
+  }
 }

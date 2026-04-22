@@ -5,68 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach } from "bun:test";
-import pomodoro from "./pomodoro";
-
-type Entry = {
-  type: string;
-  customType?: string;
-  data?: unknown;
-};
-
-function createHarness(entries: Entry[] = []) {
-  const handlers = new Map<string, Function[]>();
-  const commands = new Map<string, { handler: (args: string, ctx: any) => Promise<void> }>();
-  const notifications: Array<{ msg: string; level: string }> = [];
-  const statuses: Array<{ key: string; value: string }> = [];
-  const appended: Array<{ type: string; data: any }> = [];
-
-  const ctx = {
-    ui: {
-      theme: { fg: (_color: string, text: string) => text },
-      notify(msg: string, level: string) {
-        notifications.push({ msg, level });
-      },
-      setStatus(key: string, value: string) {
-        statuses.push({ key, value });
-      },
-    },
-    sessionManager: {
-      getEntries() {
-        return entries;
-      },
-    },
-  };
-
-  const pi = {
-    appendEntry(type: string, data: unknown) {
-      appended.push({ type, data: structuredClone(data) });
-    },
-    on(name: string, handler: Function) {
-      handlers.set(name, [...(handlers.get(name) || []), handler]);
-    },
-    registerCommand(name: string, command: any) {
-      commands.set(name, command);
-    },
-    registerTool() {},
-    registerShortcut() {},
-  };
-
-  pomodoro(pi as any);
-
-  async function startSession() {
-    for (const handler of handlers.get("session_start") || []) {
-      await handler({}, ctx);
-    }
-  }
-
-  async function runCommand(args: string) {
-    const command = commands.get("pomodoro");
-    if (!command) throw new Error("pomodoro command not registered");
-    await command.handler(args, ctx);
-  }
-
-  return { appended, notifications, runCommand, startSession, statuses };
-}
+import { createHarness } from "./tests/harness";
 
 describe("Security Tests", () => {
   describe("Prototype Pollution Prevention", () => {
@@ -125,6 +64,18 @@ describe("Security Tests", () => {
       expect(harness.notifications.length).toBeGreaterThan(0);
       const state = harness.appended.at(-1)?.data;
       expect(typeof state.currentFocus).toBe("string");
+    });
+
+    it("truncates focus strings exceeding max length", async () => {
+      const harness = createHarness();
+      await harness.startSession();
+
+      const longFocus = "B".repeat(250);
+      await harness.runCommand(`focus ${longFocus}`);
+
+      const state = harness.appended.at(-1)?.data;
+      expect(state.currentFocus.length).toBe(200);
+      expect(state.currentFocus).toBe("B".repeat(200));
     });
 
     it("handles very large numbers in state", async () => {

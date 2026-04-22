@@ -31,7 +31,8 @@ pi install npm:pi-pomodoro
 | `/pomodoro reset` | Reset to work session |
 | `/pomodoro status` | Show current status |
 | `/pomodoro focus <task>` | Set/update current focus |
-| `/pomodoro set <work> <break> <long>` | Configure durations (minutes) |
+| `/pomodoro set <work> <break> <long>` | Configure durations (minutes, max 180 each) |
+| `/pomodoro help` | Show usage information |
 
 ### Examples
 
@@ -97,8 +98,14 @@ The LLM can control the timer without user intervention - just say "start a pomo
 ## Files
 
 - `pomodoro.ts` - The extension source
-- `pomodoro.test.ts` - Core logic unit tests (36 tests)
+- `pomodoro.test.ts` - Core logic unit tests
+- `pomodoro.integration.test.ts` - Integration tests
+- `pomodoro.security.test.ts` - Security tests
 - `README.md` - This documentation
+
+## Known Limitations
+
+- **Timer precision**: Uses `setInterval` with 1-second ticks. Over long sessions, small drift may accumulate (typically negligible for 25-minute sessions).
 
 ## Testing
 
@@ -106,13 +113,10 @@ The LLM can control the timer without user intervention - just say "start a pomo
 bun test
 ```
 
-All 36 tests pass covering:
-- Time formatting
-- Timer tick logic
-- Focus tracking
-- Work/break session transitions
-- Long break logic
-- State defaults
+All 85 tests pass across 3 test files:
+- `pomodoro.test.ts` — Core logic unit tests (time formatting, tick logic, session transitions)
+- `pomodoro.integration.test.ts` — Integration tests (commands, state restoration, edge cases)
+- `pomodoro.security.test.ts` — Security tests (prototype pollution, input validation, type confusion)
 
 ## Publishing to npm
 

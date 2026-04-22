@@ -3,15 +3,38 @@ import { createHarness } from "./tests/harness";
 
 
 describe("Pomodoro extension integration", () => {
-  it("auto-start deduplication: fires at most once", async () => {
+  it("auto-start fires once per session", async () => {
     const harness = createHarness();
 
     try {
       await harness.startSession();
-      // Simulate agent_end with a task message
-      const handlers = (harness as any).handlers || new Map();
-      // agent_end should be handled gracefully without crashing even without explicit trigger
-      expect(harness.notifications.length).toBeGreaterThanOrEqual(0);
+      const notifCountBefore = harness.notifications.length;
+
+      // First agent_end with a task-like message
+      await harness.agentEnd({ messages: [{ content: "Fix the authentication bug" }] });
+      const notifCountAfter = harness.notifications.length;
+      expect(notifCountAfter).toBeGreaterThan(notifCountBefore);
+
+      // Second agent_end should not fire again (hasAutoStarted = true)
+      await harness.agentEnd({ messages: [{ content: "Another task here" }] });
+      expect(harness.notifications.length).toBe(notifCountAfter);
+    } finally {
+      harness.restoreGlobals();
+    }
+  });
+
+  it("auto-start resets on new session_start", async () => {
+    const harness = createHarness();
+
+    try {
+      await harness.startSession();
+      await harness.agentEnd({ messages: [{ content: "First task" }] });
+      const notifCountAfterFirst = harness.notifications.length;
+
+      // New session should reset hasAutoStarted
+      await harness.startSession();
+      await harness.agentEnd({ messages: [{ content: "Second task after restart" }] });
+      expect(harness.notifications.length).toBeGreaterThan(notifCountAfterFirst);
     } finally {
       harness.restoreGlobals();
     }
@@ -454,20 +477,22 @@ describe("Pomodoro extension integration", () => {
       }
     });
 
-    it("shortcut toggle shows notification via ctx", async () => {
+    it("shortcut toggle shows notification via triggerShortcut", async () => {
       const harness = createHarness();
 
       try {
         await harness.startSession();
         await harness.runCommand("set 5 1 1");
-        await harness.runCommand("start");
 
-        // Simulate shortcut toggle by directly invoking startTimer via start command
-        // Since we can't easily call the shortcut handler, verify ctx is set and notifications work
+        // Start via shortcut
+        await harness.triggerShortcut("ctrl+shift+p");
         expect(harness.notifications.at(-1)?.msg).toContain("Timer started");
+        expect(harness.intervals.length).toBe(1);
 
-        await harness.runCommand("stop");
+        // Stop via shortcut
+        await harness.triggerShortcut("ctrl+shift+p");
         expect(harness.notifications.at(-1)?.msg).toContain("paused");
+        expect(harness.intervals[0].cleared).toBe(true);
       } finally {
         harness.restoreGlobals();
       }

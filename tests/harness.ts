@@ -14,6 +14,7 @@ type Entry = {
 export function createHarness(entries: Entry[] = []) {
   const handlers = new Map<string, Function[]>();
   const commands = new Map<string, { handler: (args: string, ctx: any) => Promise<void> }>();
+  const shortcuts = new Map<string, () => Promise<void>>();
   const notifications: Array<{ msg: string; level: string }> = [];
   const statuses: Array<{ key: string; value: string }> = [];
   const appended: Array<{ type: string; data: any }> = [];
@@ -60,7 +61,9 @@ export function createHarness(entries: Entry[] = []) {
       commands.set(name, command);
     },
     registerTool() {},
-    registerShortcut() {},
+    registerShortcut(name: string, shortcut: any) {
+      shortcuts.set(name, shortcut.handler);
+    },
   };
 
   pomodoro(pi as any);
@@ -68,6 +71,12 @@ export function createHarness(entries: Entry[] = []) {
   async function startSession() {
     for (const handler of handlers.get("session_start") || []) {
       await handler({}, ctx);
+    }
+  }
+
+  async function agentEnd(event: any) {
+    for (const handler of handlers.get("agent_end") || []) {
+      await handler(event);
     }
   }
 
@@ -82,7 +91,13 @@ export function createHarness(entries: Entry[] = []) {
     globalThis.clearInterval = originalClearInterval;
   }
 
+  async function triggerShortcut(name: string) {
+    const handler = shortcuts.get(name);
+    if (handler) await handler();
+  }
+
   return {
+    agentEnd,
     appended,
     intervals,
     notifications,
@@ -90,5 +105,6 @@ export function createHarness(entries: Entry[] = []) {
     runCommand,
     startSession,
     statuses,
+    triggerShortcut,
   };
 }

@@ -198,6 +198,7 @@ export default function (pi: any) {
   // Session start - restore state
   pi.on("session_start", async (_event: any, extensionCtx: any) => {
     ctx = extensionCtx;
+    hasAutoStarted = false;
     
     for (const entry of extensionCtx.sessionManager.getEntries()) {
       if (entry.type === "custom" && entry.customType === "pomodoro-state") {

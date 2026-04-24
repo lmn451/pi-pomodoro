@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { createHarness } from "./tests/harness";
 
-
 describe("Pomodoro extension integration", () => {
   it("auto-start fires once per session", async () => {
     const harness = createHarness();
@@ -11,7 +10,9 @@ describe("Pomodoro extension integration", () => {
       const notifCountBefore = harness.notifications.length;
 
       // First agent_end with a task-like message
-      await harness.agentEnd({ messages: [{ content: "Fix the authentication bug" }] });
+      await harness.agentEnd({
+        messages: [{ content: "Fix the authentication bug" }],
+      });
       const notifCountAfter = harness.notifications.length;
       expect(notifCountAfter).toBeGreaterThan(notifCountBefore);
 
@@ -33,8 +34,12 @@ describe("Pomodoro extension integration", () => {
 
       // New session should reset hasAutoStarted
       await harness.startSession();
-      await harness.agentEnd({ messages: [{ content: "Second task after restart" }] });
-      expect(harness.notifications.length).toBeGreaterThan(notifCountAfterFirst);
+      await harness.agentEnd({
+        messages: [{ content: "Second task after restart" }],
+      });
+      expect(harness.notifications.length).toBeGreaterThan(
+        notifCountAfterFirst,
+      );
     } finally {
       harness.restoreGlobals();
     }
@@ -102,7 +107,9 @@ describe("Pomodoro extension integration", () => {
         timer.cb();
       }
 
-      expect(harness.notifications.at(-1)?.msg).toContain("Work session 1 complete");
+      expect(harness.notifications.at(-1)?.msg).toContain(
+        "Work session 1 complete",
+      );
       expect(harness.notifications.at(-1)?.msg).toContain("short break");
       expect(harness.statuses.at(-1)?.value).toContain("05:00");
       expect(harness.statuses.at(-1)?.value).toContain("Break");
@@ -218,7 +225,9 @@ describe("Pomodoro extension integration", () => {
       await harness.startSession();
 
       expect(warnCalls).toHaveLength(1);
-      expect(String(warnCalls[0][0])).toContain("Skipping invalid pomodoro state entry");
+      expect(String(warnCalls[0][0])).toContain(
+        "Skipping invalid pomodoro state entry",
+      );
       expect(harness.statuses.at(-1)?.value).toContain("02:00");
       expect(harness.statuses.at(-1)?.value).toContain("Ship release");
     } finally {
@@ -366,7 +375,9 @@ describe("Pomodoro extension integration", () => {
         await harness.startSession();
         await harness.runCommand("focus Review PR #42");
 
-        expect(harness.appended.at(-1)?.data.currentFocus).toBe("Review PR #42");
+        expect(harness.appended.at(-1)?.data.currentFocus).toBe(
+          "Review PR #42",
+        );
         expect(harness.notifications.at(-1)?.msg).toContain("Review PR #42");
       } finally {
         harness.restoreGlobals();
@@ -416,7 +427,7 @@ describe("Pomodoro extension integration", () => {
       }
     });
 
-    it("does nothing if timer already running", async () => {
+    it("shows already running message if timer active", async () => {
       const harness = createHarness();
 
       try {
@@ -428,6 +439,7 @@ describe("Pomodoro extension integration", () => {
         await harness.runCommand("start Another task");
 
         expect(harness.intervals.length).toBe(intervalsBefore);
+        expect(harness.notifications.at(-1)?.msg).toContain("already running");
       } finally {
         harness.restoreGlobals();
       }
@@ -655,8 +667,8 @@ describe("Pomodoro extension integration", () => {
         let timer = harness.intervals[harness.intervals.length - 1];
         while (!timer.cleared) timer.cb();
 
-        const completionNotif = harness.notifications.find(
-          (n) => n.msg.includes("Session complete")
+        const completionNotif = harness.notifications.find((n) =>
+          n.msg.includes("Session complete"),
         );
         expect(completionNotif?.msg).toContain("Ship feature X");
       } finally {
@@ -679,7 +691,9 @@ describe("Pomodoro extension integration", () => {
         timer = harness.intervals[harness.intervals.length - 1];
         while (!timer.cleared) timer.cb();
 
-        expect(harness.notifications.at(-1)?.msg).toBe("Break over! Time to focus.");
+        expect(harness.notifications.at(-1)?.msg).toBe(
+          "Break over! Time to focus.",
+        );
       } finally {
         harness.restoreGlobals();
       }

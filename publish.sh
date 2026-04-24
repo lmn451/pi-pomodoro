@@ -50,8 +50,8 @@ git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
 echo "✓ Created tag v$NEW_VERSION"
 
 # 4. Push commits and tags
-git push origin main --tags
-echo "✓ Pushed to origin/main with tags"
+git push origin master --tags
+echo "✓ Pushed to origin/master with tags"
 
 echo ""
 echo "🎉 Published v$NEW_VERSION!"

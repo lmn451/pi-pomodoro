@@ -67,7 +67,9 @@ export default function (pi: any) {
 
   function truncateFocus(focus: string): string {
     const trimmed = focus.trim();
-    return trimmed.length > MAX_FOCUS_LENGTH ? trimmed.slice(0, MAX_FOCUS_LENGTH) : trimmed;
+    return trimmed.length > MAX_FOCUS_LENGTH
+      ? trimmed.slice(0, MAX_FOCUS_LENGTH)
+      : trimmed;
   }
 
   function parseDurationMinutes(value?: string): number | null {
@@ -86,17 +88,31 @@ export default function (pi: any) {
 
     state = {
       ...state,
-      ...(typeof data.isRunning === "boolean" ? { isRunning: data.isRunning } : {}),
+      ...(typeof data.isRunning === "boolean"
+        ? { isRunning: data.isRunning }
+        : {}),
       ...(typeof data.isBreak === "boolean" ? { isBreak: data.isBreak } : {}),
-      ...(isNonNegativeInteger(data.remainingSeconds) ? { remainingSeconds: data.remainingSeconds } : {}),
-      ...(isPositiveInteger(data.workDuration) ? { workDuration: data.workDuration } : {}),
-      ...(isPositiveInteger(data.breakDuration) ? { breakDuration: data.breakDuration } : {}),
-      ...(isPositiveInteger(data.longBreakDuration) ? { longBreakDuration: data.longBreakDuration } : {}),
-      ...(isNonNegativeInteger(data.sessionsCompleted) ? { sessionsCompleted: data.sessionsCompleted } : {}),
+      ...(isNonNegativeInteger(data.remainingSeconds)
+        ? { remainingSeconds: data.remainingSeconds }
+        : {}),
+      ...(isPositiveInteger(data.workDuration)
+        ? { workDuration: data.workDuration }
+        : {}),
+      ...(isPositiveInteger(data.breakDuration)
+        ? { breakDuration: data.breakDuration }
+        : {}),
+      ...(isPositiveInteger(data.longBreakDuration)
+        ? { longBreakDuration: data.longBreakDuration }
+        : {}),
+      ...(isNonNegativeInteger(data.sessionsCompleted)
+        ? { sessionsCompleted: data.sessionsCompleted }
+        : {}),
       ...(isPositiveInteger(data.sessionsUntilLongBreak)
         ? { sessionsUntilLongBreak: data.sessionsUntilLongBreak }
         : {}),
-      ...(typeof data.currentFocus === "string" ? { currentFocus: data.currentFocus } : {}),
+      ...(typeof data.currentFocus === "string"
+        ? { currentFocus: data.currentFocus }
+        : {}),
     };
   }
 
@@ -112,11 +128,17 @@ export default function (pi: any) {
     const mode = state.isBreak ? "Break" : "Work";
     const time = formatTime(state.remainingSeconds);
     const focus = state.currentFocus ? " 📋 " + state.currentFocus : "";
-    
+
     if (state.isRunning) {
-      ctx.ui.setStatus(STATUS_KEY, theme.fg("accent", "●") + " [Pomodoro " + mode + "] " + time + focus);
+      ctx.ui.setStatus(
+        STATUS_KEY,
+        theme.fg("accent", "●") + " [Pomodoro " + mode + "] " + time + focus,
+      );
     } else {
-      ctx.ui.setStatus(STATUS_KEY, "[Pomodoro " + mode + "] " + time + " (paused)" + focus);
+      ctx.ui.setStatus(
+        STATUS_KEY,
+        "[Pomodoro " + mode + "] " + time + " (paused)" + focus,
+      );
     }
   }
 
@@ -136,9 +158,9 @@ export default function (pi: any) {
 
   function startTimer(focus?: string) {
     if (timerInterval) return;
-    
+
     if (focus) state.currentFocus = truncateFocus(focus);
-    
+
     state.isRunning = true;
     updateStatus();
     persistState();
@@ -177,13 +199,23 @@ export default function (pi: any) {
         state.isBreak = true;
         state.remainingSeconds = state.longBreakDuration;
         state.sessionsUntilLongBreak = DEFAULT_SESSIONS_UNTIL_LONG;
-        ctx?.ui.notify("Work session " + state.sessionsCompleted + " complete! Take a long break.", "success");
+        ctx?.ui.notify(
+          "Work session " +
+            state.sessionsCompleted +
+            " complete! Take a long break.",
+          "success",
+        );
       } else {
         state.isBreak = true;
         state.remainingSeconds = state.breakDuration;
-        ctx?.ui.notify("Work session " + state.sessionsCompleted + " complete! Take a short break.", "success");
+        ctx?.ui.notify(
+          "Work session " +
+            state.sessionsCompleted +
+            " complete! Take a short break.",
+          "success",
+        );
       }
-      
+
       state.currentFocus = "";
     }
 
@@ -199,23 +231,24 @@ export default function (pi: any) {
   pi.on("session_start", async (_event: any, extensionCtx: any) => {
     ctx = extensionCtx;
     hasAutoStarted = false;
-    
+
     for (const entry of extensionCtx.sessionManager.getEntries()) {
       if (entry.type === "custom" && entry.customType === "pomodoro-state") {
         restoreStateEntry(entry.data);
       }
     }
-    
+
     if (state.isRunning && !timerInterval) {
       beginTimerInterval();
     }
-    
+
     updateStatus();
   });
 
   // Register command
   pi.registerCommand("pomodoro", {
-    description: "Pomodoro: start [focus] | stop | reset | status | focus <task> | set <work> <break> <long>",
+    description:
+      "Pomodoro: start [focus] | stop | reset | status | focus <task> | set <work> <break> <long>",
     handler: async (args: string, extensionCtx: any) => {
       ctx = extensionCtx;
       const parts = args.trim().split(/\s+/);
@@ -223,9 +256,16 @@ export default function (pi: any) {
 
       switch (action) {
         case "start": {
+          if (timerInterval) {
+            extensionCtx.ui.notify(
+              "Timer already running: " + formatTime(state.remainingSeconds),
+              "info",
+            );
+            break;
+          }
           const focus = parts.slice(1).join(" ") || undefined;
           startTimer(focus);
-          
+
           let msg = "Timer started: " + formatTime(state.remainingSeconds);
           if (state.currentFocus) msg += " [" + state.currentFocus + "]";
           extensionCtx.ui.notify(msg, "info");
@@ -234,7 +274,10 @@ export default function (pi: any) {
 
         case "stop":
           stopTimer();
-          extensionCtx.ui.notify("Timer paused at " + formatTime(state.remainingSeconds), "info");
+          extensionCtx.ui.notify(
+            "Timer paused at " + formatTime(state.remainingSeconds),
+            "info",
+          );
           break;
 
         case "reset":
@@ -248,12 +291,18 @@ export default function (pi: any) {
           break;
 
         case "status": {
-          const focus = state.currentFocus ? " [" + state.currentFocus + "]" : "";
+          const focus = state.currentFocus
+            ? " [" + state.currentFocus + "]"
+            : "";
           extensionCtx.ui.notify(
-            (state.isRunning ? "Running" : "Paused") + ": " + 
-            formatTime(state.remainingSeconds) + " (" + 
-            (state.isBreak ? "break" : "work") + ")" + focus,
-            "info"
+            (state.isRunning ? "Running" : "Paused") +
+              ": " +
+              formatTime(state.remainingSeconds) +
+              " (" +
+              (state.isBreak ? "break" : "work") +
+              ")" +
+              focus,
+            "info",
           );
           break;
         }
@@ -266,9 +315,15 @@ export default function (pi: any) {
             extensionCtx.ui.notify("Focus set: " + state.currentFocus, "info");
             persistState();
           } else if (state.currentFocus) {
-            extensionCtx.ui.notify("Current focus: " + state.currentFocus, "info");
+            extensionCtx.ui.notify(
+              "Current focus: " + state.currentFocus,
+              "info",
+            );
           } else {
-            extensionCtx.ui.notify("No focus set. Usage: /pomodoro focus <task>", "info");
+            extensionCtx.ui.notify(
+              "No focus set. Usage: /pomodoro focus <task>",
+              "info",
+            );
           }
           break;
         }
@@ -276,7 +331,7 @@ export default function (pi: any) {
         case "help":
           extensionCtx.ui.notify(
             "Pomodoro: /pomodoro start [focus] | stop | reset | status | focus <task> | set <work> <break> <long>",
-            "info"
+            "info",
           );
           break;
 
@@ -284,26 +339,32 @@ export default function (pi: any) {
           const workMins = parseDurationMinutes(parts[1]);
           const breakMins = parseDurationMinutes(parts[2]);
           const longMins = parseDurationMinutes(parts[3]);
-          
+
           if (workMins === null || breakMins === null || longMins === null) {
             extensionCtx.ui.notify(
               "Invalid durations. Use: /pomodoro set <work> <break> <long> (positive whole minutes)",
-              "info"
+              "info",
             );
             break;
           }
-          
+
           state.workDuration = workMins * 60;
           state.breakDuration = breakMins * 60;
           state.longBreakDuration = longMins * 60;
-          
+
           if (!state.isRunning && !state.isBreak) {
             state.remainingSeconds = state.workDuration;
           }
-          
+
           extensionCtx.ui.notify(
-            "Configured: Work " + workMins + "m, Break " + breakMins + "m, Long " + longMins + "m",
-            "info"
+            "Configured: Work " +
+              workMins +
+              "m, Break " +
+              breakMins +
+              "m, Long " +
+              longMins +
+              "m",
+            "info",
           );
           updateStatus();
           persistState();
@@ -313,7 +374,7 @@ export default function (pi: any) {
         default:
           extensionCtx.ui.notify(
             "Pomodoro: /pomodoro start [focus] | stop | reset | status | focus <task> | set <work> <break> <long>",
-            "info"
+            "info",
           );
       }
     },
@@ -323,12 +384,21 @@ export default function (pi: any) {
   pi.registerTool({
     name: "pomodoro_start",
     label: "Pomodoro Start",
-    description: "Start the Pomodoro timer. Optionally set a focus task for this session.",
+    description:
+      "Start the Pomodoro timer. Optionally set a focus task for this session.",
     promptSnippet: "Start the Pomodoro timer with an optional focus task",
     parameters: Type.Object({
-      focus: Type.Optional(Type.String({ description: "Focus task for this session (optional)" })),
+      focus: Type.Optional(
+        Type.String({ description: "Focus task for this session (optional)" }),
+      ),
     }),
-    async execute(_toolCallId: string, params: { focus?: string }, _signal: any, _onUpdate: any, extensionCtx: any) {
+    async execute(
+      _toolCallId: string,
+      params: { focus?: string },
+      _signal: any,
+      _onUpdate: any,
+      extensionCtx: any,
+    ) {
       ctx = extensionCtx;
       startTimer(params.focus);
       let msg = "Pomodoro started: " + formatTime(state.remainingSeconds);
@@ -343,10 +413,24 @@ export default function (pi: any) {
     description: "Pause the Pomodoro timer.",
     promptSnippet: "Pause the Pomodoro timer",
     parameters: Type.Object({}),
-    async execute(_toolCallId: string, _params: any, _signal: any, _onUpdate: any, extensionCtx: any) {
+    async execute(
+      _toolCallId: string,
+      _params: any,
+      _signal: any,
+      _onUpdate: any,
+      extensionCtx: any,
+    ) {
       ctx = extensionCtx;
       stopTimer();
-      return { content: [{ type: "text", text: "Pomodoro paused at " + formatTime(state.remainingSeconds) }], details: {} };
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Pomodoro paused at " + formatTime(state.remainingSeconds),
+          },
+        ],
+        details: {},
+      };
     },
   });
 
@@ -356,7 +440,13 @@ export default function (pi: any) {
     description: "Reset the Pomodoro timer to the start of a work session.",
     promptSnippet: "Reset the Pomodoro timer",
     parameters: Type.Object({}),
-    async execute(_toolCallId: string, _params: any, _signal: any, _onUpdate: any, extensionCtx: any) {
+    async execute(
+      _toolCallId: string,
+      _params: any,
+      _signal: any,
+      _onUpdate: any,
+      extensionCtx: any,
+    ) {
       ctx = extensionCtx;
       stopTimer();
       state.remainingSeconds = state.workDuration;
@@ -364,25 +454,44 @@ export default function (pi: any) {
       state.currentFocus = "";
       updateStatus();
       persistState();
-      return { content: [{ type: "text", text: "Pomodoro reset to " + formatTime(state.workDuration) }], details: {} };
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Pomodoro reset to " + formatTime(state.workDuration),
+          },
+        ],
+        details: {},
+      };
     },
   });
 
   pi.registerTool({
     name: "pomodoro_status",
     label: "Pomodoro Status",
-    description: "Get the current Pomodoro timer status: running/paused, time remaining, mode, focus, and sessions completed.",
+    description:
+      "Get the current Pomodoro timer status: running/paused, time remaining, mode, focus, and sessions completed.",
     promptSnippet: "Get current Pomodoro timer status",
     parameters: Type.Object({}),
-    async execute(_toolCallId: string, _params: any, _signal: any, _onUpdate: any, extensionCtx: any) {
+    async execute(
+      _toolCallId: string,
+      _params: any,
+      _signal: any,
+      _onUpdate: any,
+      extensionCtx: any,
+    ) {
       ctx = extensionCtx;
       const focus = state.currentFocus ? " [" + state.currentFocus + "]" : "";
       const text =
         (state.isRunning ? "Running" : "Paused") +
-        ": " + formatTime(state.remainingSeconds) +
-        " (" + (state.isBreak ? "break" : "work") + ")" +
+        ": " +
+        formatTime(state.remainingSeconds) +
+        " (" +
+        (state.isBreak ? "break" : "work") +
+        ")" +
         focus +
-        " | Sessions completed: " + state.sessionsCompleted;
+        " | Sessions completed: " +
+        state.sessionsCompleted;
       return { content: [{ type: "text", text }], details: { ...state } };
     },
   });
@@ -390,17 +499,27 @@ export default function (pi: any) {
   pi.registerTool({
     name: "pomodoro_focus",
     label: "Pomodoro Focus",
-    description: "Set or update the focus task for the current Pomodoro session.",
+    description:
+      "Set or update the focus task for the current Pomodoro session.",
     promptSnippet: "Set the Pomodoro focus task",
     parameters: Type.Object({
       focus: Type.String({ description: "The task to focus on" }),
     }),
-    async execute(_toolCallId: string, params: { focus: string }, _signal: any, _onUpdate: any, extensionCtx: any) {
+    async execute(
+      _toolCallId: string,
+      params: { focus: string },
+      _signal: any,
+      _onUpdate: any,
+      extensionCtx: any,
+    ) {
       ctx = extensionCtx;
       state.currentFocus = truncateFocus(params.focus);
       updateStatus();
       persistState();
-      return { content: [{ type: "text", text: "Focus set: " + state.currentFocus }], details: {} };
+      return {
+        content: [{ type: "text", text: "Focus set: " + state.currentFocus }],
+        details: {},
+      };
     },
   });
 
@@ -410,7 +529,10 @@ export default function (pi: any) {
     handler: async () => {
       if (state.isRunning) {
         stopTimer();
-        ctx?.ui.notify("Timer paused at " + formatTime(state.remainingSeconds), "info");
+        ctx?.ui.notify(
+          "Timer paused at " + formatTime(state.remainingSeconds),
+          "info",
+        );
       } else {
         startTimer();
         let msg = "Timer started: " + formatTime(state.remainingSeconds);
@@ -438,27 +560,33 @@ export default function (pi: any) {
 
   // Auto-run: start timer when user assigns a task
   pi.on("agent_end", async (event: any) => {
-    if (hasAutoStarted || state.isRunning || state.sessionsCompleted > 0) return;
+    if (hasAutoStarted || state.isRunning || state.sessionsCompleted > 0)
+      return;
     if (!ctx) return;
-    
+
     const messages = event.messages || [];
     const lastMessage = messages[messages.length - 1];
-    
+
     // Check if user sent a substantive message (not just greeting)
-    const isTask = lastMessage?.content && 
-      lastMessage.content.length > 10 &&
-      !lastMessage.content.match(/^(hi|hey|hello|thanks|thank you)/i);
-    
+    const content =
+      typeof lastMessage?.content === "string" ? lastMessage.content : "";
+    const isTask =
+      content.length > 10 &&
+      !content.match(/^(hi|hey|hello|thanks|thank you)/i);
+
     if (isTask) {
       // Auto-start the pomodoro with the task as focus
-      const taskText = lastMessage.content.substring(0, MAX_FOCUS_LENGTH);
+      const taskText = content.substring(0, MAX_FOCUS_LENGTH);
       hasAutoStarted = true;
       startTimer(taskText);
       ctx.ui.notify("🍅 Pomodoro started for: " + taskText, "info");
     } else if (messages.length <= 2) {
       // First message but looks like greeting - still suggest
       hasAutoStarted = true;
-      ctx.ui.notify("💡 Tip: Start a pomodoro with /pomodoro start or pomodoro_start tool", "info");
+      ctx.ui.notify(
+        "💡 Tip: Start a pomodoro with /pomodoro start or pomodoro_start tool",
+        "info",
+      );
     }
   });
 
